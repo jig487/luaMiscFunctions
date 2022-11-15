@@ -1,0 +1,92 @@
+local function handleMenu(menuOptions)
+
+    local cursor = 1
+    local page = 1
+    local _,h = term.getSize()
+    h = h - 2
+    local maxPage = math.ceil(#menuOptions/(h))
+
+    local menuColor = false
+    if menuOptions.menuColor then
+        menuColor = menuOptions.menuColor
+    end
+
+    local highlightColor = false
+    if menuOptions.highlight then
+        highlightColor = menuOptions.highlightColor
+    end
+
+    while true do
+
+        local currentPage = {}
+        --fill currentPage with an amount of items that would fit on the screen 
+        --based on what page we should be looking at
+        for i = h*(page-1), h*page do
+            currentPage[#currentPage+1] = menuOptions[i]
+        end
+
+        while true do
+
+            term.setCursorPos(1,1)
+
+            local col = term.getTextColor()
+            if menuColor then
+                term.setTextColor(menuColor)
+            end
+
+            for option = 1, #currentPage do
+                if option == cursor then
+                    if highlightColor then term.setTextColor(highlightColor) end
+                    print(">"..(currentPage[option].txt).."< ")
+                    if menuColor then term.setTextColor(menuColor) else term.setTextColor(col) end
+                else
+                    if currentPage[option].txtColor then term.setTextColor(currentPage[option].txtColor) end
+                    print("["..(currentPage[option].txt).."] ")
+                    if menuColor then term.setTextColor(menuColor) else term.setTextColor(col) end
+                end
+            end
+            print("Page "..page.." / "..maxPage)
+
+            term.setTextColor(col)
+
+            local _, key = os.pullEvent("key")
+            if key == keys.up then
+                --Move cursor up if it's not at first option
+                if cursor > 1 then
+                    cursor = cursor - 1
+                end
+            elseif key == keys.down then
+                --move cursor down if it's not at last option
+                if cursor < #currentPage then
+                    cursor = cursor + 1
+                end
+            elseif key == keys.left then
+                --switch to previous page if not at first page
+                if page > 1 then
+                    page = page - 1
+                    cursor = 1
+                    term.clear()
+                    break
+                end
+            elseif key == keys.right then
+                --switch to next page if not at last page
+                if page < maxPage then
+                    page = page + 1
+                    cursor = 1
+                    term.clear()
+                    break
+                end
+            elseif key == keys.enter then
+                --return the menu choice
+                return currentPage[ tonumber(cursor) ].target
+            elseif key == keys.backspace then
+                --exit the menu
+                return "exit"
+            end
+        end
+    end
+end
+
+return {
+  handleMenu = handleMenu
+}
