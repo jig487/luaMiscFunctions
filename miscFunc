@@ -1,53 +1,63 @@
-local function handleMenu(menuOptions)
+local debug = false
+
+--[[
+    Takes in a table with sub tables containing a string called 'label' and displays them as a arrow-key navigatable menu.
+    Optional 'pageLength' determines how many options to show on screen at once per page. Defaults to screen height - 2.
+    Input table example:
+tbl = {
+    { label = "" },
+    { label = "" }
+    ...
+}  
+]]
+local function handleMenu(menuOptions,pageLength)
+    if not pageLength then
+        local _,h = term.getSize()
+        pageLength = math.ceil(#menuOptions/(h-2))
+    end
+
+    local menuColor = colors.green
+    local highLight = colors.orange
+
+    local maxCursor = #menuOptions
+    local maxPage = math.ceil(maxCursor/pageLength)
 
     local cursor = 1
-    local page = 1
-    local _,h = term.getSize()
-    h = h - 2
-    local maxPage = math.ceil(#menuOptions/(h))
+    local page = math.max(1, math.ceil(cursor/pageLength))
 
-    local menuColor = false
-    if menuOptions.menuColor then
-        menuColor = menuOptions.menuColor
-    end
+    local startCol = term.getTextColor()
+    term.setTextColor(menuColor)
 
-    local highlightColor = false
-    if menuOptions.highlight then
-        highlightColor = menuOptions.highlightColor
-    end
-
-    while true do
-
-        local currentPage = {}
-        --fill currentPage with an amount of items that would fit on the screen 
-        --based on what page we should be looking at
-        for i = h*(page-1), h*page do
-            currentPage[#currentPage+1] = menuOptions[i]
-        end
-
+    term.clear()
+    --while true do
         while true do
 
-            term.setCursorPos(1,1)
+            local startIndex = math.max( pageLength*(page-1)+1 , 1 )
+            local endIndex = math.min( pageLength*page , maxCursor )
 
-            local col = term.getTextColor()
-            if menuColor then
-                term.setTextColor(menuColor)
+            cursor = math.min(endIndex, math.max(startIndex,cursor) )
+
+            if debug then
+                txt(24,1,"maxCurs :"..maxCursor.."  ")
+                txt(24,2,"maxPage :"..maxPage.."  ")
+                txt(24,3,"cursor :"..cursor.."  ")
+                txt(24,4,"page :"..page.."  ")
+                txt(24,5,"startIndex :"..startIndex.."  ")
+                txt(24,6,"endIndex :"..endIndex.."  ")
             end
 
-            for option = 1, #currentPage do
-                if option == cursor then
-                    if highlightColor then term.setTextColor(highlightColor) end
-                    print(">"..(currentPage[option].txt).."< ")
-                    if menuColor then term.setTextColor(menuColor) else term.setTextColor(col) end
+            term.setCursorPos(1,1)
+            for i = startIndex, endIndex do
+                if i == cursor then
+                    term.setTextColor(highLight)
+                    print(">"..(menuOptions[i].label).."< ")
+                    term.setTextColor(menuColor)
                 else
-                    if currentPage[option].txtColor then term.setTextColor(currentPage[option].txtColor) end
-                    print("["..(currentPage[option].txt).."] ")
-                    if menuColor then term.setTextColor(menuColor) else term.setTextColor(col) end
+                    print("["..(menuOptions[i].label).."] ")
                 end
             end
-            print("Page "..page.." / "..maxPage)
-
-            term.setTextColor(col)
+            print("\nPage "..page.." / "..maxPage)
+            
 
             local _, key = os.pullEvent("key")
             if key == keys.up then
@@ -57,36 +67,38 @@ local function handleMenu(menuOptions)
                 end
             elseif key == keys.down then
                 --move cursor down if it's not at last option
-                if cursor < #currentPage then
+                if cursor < maxCursor then
                     cursor = cursor + 1
                 end
             elseif key == keys.left then
                 --switch to previous page if not at first page
                 if page > 1 then
+                    cursor = cursor - pageLength
                     page = page - 1
-                    cursor = 1
                     term.clear()
-                    break
+                    --break
                 end
             elseif key == keys.right then
                 --switch to next page if not at last page
                 if page < maxPage then
+                    cursor = cursor + pageLength
                     page = page + 1
-                    cursor = 1
                     term.clear()
-                    break
+                    --break
                 end
             elseif key == keys.enter then
                 --return the menu choice
-                return currentPage[ tonumber(cursor) ].target
+                term.setTextColor(startCol)
+                return cursor,"enter"
             elseif key == keys.backspace then
                 --exit the menu
-                return "exit"
+                term.setTextColor(startCol)
+                return cursor,"exit"
             end
         end
-    end
+    --end
 end
 
 return {
-  handleMenu = handleMenu
+    handleMenu = handleMenu
 }
